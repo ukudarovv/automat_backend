@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Optional
 
 import httpx
 
@@ -109,7 +110,7 @@ class ApiClient:
         resp = await self._request_with_retry("GET", f"{self.base_url}/schools/{school_id}", headers=self._headers())
         return resp.json()
 
-    async def get_instructors(self, city_id: int, category_id: int, gearbox: str | None = None, gender: str | None = None):
+    async def get_instructors(self, city_id: int, category_id: int, gearbox: Optional[str] = None, gender: Optional[str] = None):
         params = {"city_id": city_id, "category_id": category_id}
         if gearbox:
             params["gearbox"] = gearbox

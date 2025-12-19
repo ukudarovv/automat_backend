@@ -1,3 +1,5 @@
+from typing import List
+
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from i18n import t
@@ -58,7 +60,7 @@ def confirm_keyboard(lang: str = "RU"):
     )
 
 
-def choices_keyboard(options: list[str], lang: str = "RU"):
+def choices_keyboard(options: List[str], lang: str = "RU"):
     rows = [[KeyboardButton(text=opt)] for opt in options]
     rows.append([KeyboardButton(text=t("back", lang)), KeyboardButton(text=t("main_menu", lang))])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)

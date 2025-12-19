@@ -1,8 +1,10 @@
+from typing import Optional
+
 import httpx
 from config import API_BASE_URL, API_KEY
 
 
-async def send_event(event_name: str, payload: dict | None = None, bot_user_id: int | None = None, lead_id=None):
+async def send_event(event_name: str, payload: Optional[dict] = None, bot_user_id: Optional[int] = None, lead_id=None):
     if not API_KEY:
         return
     data = {
