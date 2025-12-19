@@ -1,6 +1,7 @@
 import csv
 import urllib.parse
 from datetime import timedelta
+from typing import Optional
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -326,7 +327,7 @@ def _build_wa_link(phone: str, text: str) -> str:
     return f"https://wa.me/{clean_phone}?text={urllib.parse.quote(text)}"
 
 
-def _get_whatsapp_template(lead: Lead) -> WhatsAppTemplate | None:
+def _get_whatsapp_template(lead: Lead) -> Optional[WhatsAppTemplate]:
     """Получить WhatsApp шаблон для лида"""
     scope = None
     if lead.type == Lead.LeadType.SCHOOL:
