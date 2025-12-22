@@ -15,12 +15,12 @@ def language_keyboard():
 
 
 def main_menu(lang: str = "RU"):
-    """Главное меню с 3 интентами согласно новому ТЗ"""
+    """Главное меню с 3 опциями"""
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=t("no_license", lang))],
             [KeyboardButton(text=t("has_license", lang))],
-            [KeyboardButton(text=t("has_certificate", lang))],
+            [KeyboardButton(text=t("main_menu_tests", lang))],
         ],
         resize_keyboard=True,
     )

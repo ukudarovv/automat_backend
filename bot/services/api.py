@@ -106,8 +106,13 @@ class ApiClient:
         )
         return resp.json()
 
-    async def get_school_detail(self, school_id: int):
-        resp = await self._request_with_retry("GET", f"{self.base_url}/schools/{school_id}", headers=self._headers())
+    async def get_school_detail(self, school_id: int, category_id: Optional[int] = None, training_format_id: Optional[int] = None):
+        params = {}
+        if category_id:
+            params["category_id"] = category_id
+        if training_format_id:
+            params["training_format_id"] = training_format_id
+        resp = await self._request_with_retry("GET", f"{self.base_url}/schools/{school_id}", params=params, headers=self._headers())
         return resp.json()
 
     async def get_instructors(self, city_id: int, category_id: int, gearbox: Optional[str] = None, gender: Optional[str] = None):

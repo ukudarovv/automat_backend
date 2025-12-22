@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import School, SchoolTariff, Instructor, InstructorTariff
@@ -5,16 +6,22 @@ from .models import School, SchoolTariff, Instructor, InstructorTariff
 
 class SchoolTariffSerializer(serializers.ModelSerializer):
     code = serializers.CharField(source="tariff_plan.code", read_only=True)
+    name_ru = serializers.CharField(source="tariff_plan.name_ru", read_only=True)
+    name_kz = serializers.CharField(source="tariff_plan.name_kz", read_only=True)
 
     class Meta:
         model = SchoolTariff
         fields = (
             "tariff_plan_id",
             "code",
+            "name_ru",
+            "name_kz",
             "price_kzt",
             "currency",
             "description_ru",
             "description_kz",
+            "category_id",
+            "training_format_id",
         )
 
 
@@ -55,12 +62,35 @@ class SchoolListSerializer(serializers.ModelSerializer):
 
 
 class SchoolDetailSerializer(SchoolListSerializer):
-    tariffs = SchoolTariffSerializer(many=True, read_only=True)
+    tariffs = serializers.SerializerMethodField()
     contact_phone = serializers.CharField()
     whatsapp_phone = serializers.CharField()
 
     class Meta(SchoolListSerializer.Meta):
         fields = SchoolListSerializer.Meta.fields + ("contact_phone", "whatsapp_phone", "tariffs")
+    
+    def get_tariffs(self, obj):
+        tariffs = obj.tariffs.filter(is_active=True)
+        category_id = self.context.get('category_id')
+        training_format_id = self.context.get('training_format_id')
+        
+        # Фильтрация: тариф показывается, если он не привязан к категории (null) или совпадает с выбранной
+        if category_id:
+            try:
+                category_id = int(category_id)
+                tariffs = tariffs.filter(Q(category_id=category_id) | Q(category_id__isnull=True))
+            except (ValueError, TypeError):
+                pass
+        
+        # Фильтрация: тариф показывается, если он не привязан к формату (null) или совпадает с выбранным
+        if training_format_id:
+            try:
+                training_format_id = int(training_format_id)
+                tariffs = tariffs.filter(Q(training_format_id=training_format_id) | Q(training_format_id__isnull=True))
+            except (ValueError, TypeError):
+                pass
+        
+        return SchoolTariffSerializer(tariffs, many=True).data
 
 
 class InstructorTariffSerializer(serializers.ModelSerializer):

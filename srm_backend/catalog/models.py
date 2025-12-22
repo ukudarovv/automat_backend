@@ -39,6 +39,8 @@ class School(models.Model):
 class SchoolTariff(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="tariffs")
     tariff_plan = models.ForeignKey(TariffPlan, on_delete=models.PROTECT)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    training_format = models.ForeignKey(TrainingFormat, on_delete=models.SET_NULL, null=True, blank=True)
     price_kzt = models.IntegerField()
     currency = models.CharField(max_length=3, default="KZT")
     description_ru = models.TextField(null=True, blank=True)
@@ -47,9 +49,10 @@ class SchoolTariff(models.Model):
 
     class Meta:
         db_table = "school_tariff"
-        unique_together = ("school", "tariff_plan")
+        unique_together = ("school", "tariff_plan", "category", "training_format")
         indexes = [
             models.Index(fields=["school", "is_active"]),
+            models.Index(fields=["category", "training_format", "is_active"]),
         ]
 
     def __str__(self):

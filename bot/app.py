@@ -65,10 +65,10 @@ async def main():
         await state.clear()
         await message.answer(t("main_welcome", lang), reply_markup=main_menu(lang))
     
-    # Обработчик "Нет водительских прав" → поток автошкол
+    # Обработчик "Выбор автошколы" → поток автошкол
     @root_router.message(F.text.in_([
-        "❗ Нет водительских прав — хочу стать водителем",
-        "❗ Жүргізуші куәлігі жоқ — жүргізуші болғым келеді",
+        "Выбор автошколы",
+        "Автошкола таңдау",
     ]))
     async def handle_no_license(message: Message, state: FSMContext):
         await state.clear()
@@ -80,10 +80,10 @@ async def main():
         from handlers.schools_flow import schools_start
         await schools_start(message, state)
     
-    # Обработчик "Есть водительские права" → поток инструкторов
+    # Обработчик "Записаться на вождение" → поток инструкторов
     @root_router.message(F.text.in_([
-        "🚗 Есть водительские права — хочу освежить навыки",
-        "🚗 Жүргізуші куәлігі бар — дағдыларды жаңартқым келеді",
+        "Записаться на вождение",
+        "Жүргізуге жазылу",
     ]))
     async def handle_has_license(message: Message, state: FSMContext):
         await state.clear()
@@ -95,20 +95,20 @@ async def main():
         from handlers.instructors_flow import instructors_start
         await instructors_start(message, state)
     
-    # Обработчик "Есть сертификат" → новый поток выбора действия
+    # Обработчик "Тесты по ПДД" → поток тестов
     @root_router.message(F.text.in_([
-        "📄 Есть сертификат, но не сдал экзамен",
-        "📄 Сертификат бар, бірақ емтихан тапсырылмаған",
+        "📘 Тесты по ПДД",
+        "📘 ЖҚД тесттері",
     ]))
-    async def handle_has_certificate(message: Message, state: FSMContext):
+    async def handle_tests_menu(message: Message, state: FSMContext):
         await state.clear()
         lang = await get_user_language(message, state)
-        await send_event("intent_selected", {"intent": "CERT_NOT_PASSED"}, bot_user_id=message.from_user.id)
+        await send_event("intent_selected", {"intent": "TESTS"}, bot_user_id=message.from_user.id)
         # Сохраняем intent в state
-        await state.update_data(main_intent="CERT_NOT_PASSED", language=lang)
-        # Переход в поток "Есть сертификат"
-        from handlers.certificate_flow import certificate_start
-        await certificate_start(message, state)
+        await state.update_data(main_intent="TESTS", language=lang)
+        # Переход в поток тестов
+        from handlers.tests_flow import tests_start
+        await tests_start(message, state)
 
     # Порядок важен: более специфичные роутеры должны быть первыми
     dp.include_router(language_flow.router)

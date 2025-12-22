@@ -21,7 +21,13 @@ class SchoolListView(generics.ListAPIView):
 class SchoolDetailView(generics.RetrieveAPIView):
     serializer_class = SchoolDetailSerializer
     permission_classes = [ApiKeyPermission]
-    queryset = School.objects.filter(is_active=True).prefetch_related("tariffs", "tariffs__tariff_plan")
+    queryset = School.objects.filter(is_active=True).prefetch_related("tariffs", "tariffs__tariff_plan", "tariffs__category", "tariffs__training_format")
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['category_id'] = self.request.query_params.get('category_id')
+        context['training_format_id'] = self.request.query_params.get('training_format_id')
+        return context
 
 
 class InstructorListView(generics.ListAPIView):

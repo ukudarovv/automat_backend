@@ -50,6 +50,13 @@ def get_name_by_lang(item: dict, lang: str) -> str:
     return item.get("name_ru", item.get("name", {}).get("ru", ""))
 
 
+def get_tariff_name(tariff_item: dict, lang: str) -> str:
+    """Получить название тарифа на нужном языке из данных API"""
+    if lang == "KZ":
+        return tariff_item.get('name_kz') or tariff_item.get('name_ru') or tariff_item.get('code', '')
+    return tariff_item.get('name_ru') or tariff_item.get('code', '')
+
+
 async def handle_api_error(error: Exception, lang: str, message: Message, state: FSMContext):
     """Обработать ошибку API и отправить понятное сообщение пользователю"""
     if isinstance(error, ApiClientError):
@@ -292,13 +299,41 @@ async def schools_choose_school(message: Message, state: FSMContext):
         return
     api = ApiClient()
     try:
-        detail = await api.get_school_detail(school_id)
+        category_id = data.get("category_id")
+        training_format_id = data.get("training_format_id")
+        detail = await api.get_school_detail(
+            school_id,
+            category_id=category_id,
+            training_format_id=training_format_id
+        )
     except Exception as e:
         await api.close()
         await handle_api_error(e, lang, message, state)
         return
     await api.close()
     tariffs = detail.get("tariffs", [])
+    
+    # Дополнительная фильтрация на стороне бота (на случай, если API не отфильтровал)
+    # Логика: тариф показывается, если он не привязан (None) или совпадает с выбранными параметрами
+    if category_id or training_format_id:
+        filtered_tariffs = []
+        for tariff in tariffs:
+            tariff_category_id = tariff.get("category_id")
+            tariff_training_format_id = tariff.get("training_format_id")
+            
+            # Проверяем соответствие категории: показываем если null или совпадает
+            if category_id:
+                if tariff_category_id is not None and tariff_category_id != category_id:
+                    continue
+            
+            # Проверяем соответствие формата обучения: показываем если null или совпадает
+            if training_format_id:
+                if tariff_training_format_id is not None and tariff_training_format_id != training_format_id:
+                    continue
+            
+            filtered_tariffs.append(tariff)
+        tariffs = filtered_tariffs
+    
     if not tariffs:
         await message.answer(t("no_tariffs", lang), reply_markup=main_menu(lang))
         await state.clear()
@@ -495,12 +530,15 @@ async def schools_register_button(message: Message, state: FSMContext):
     data = await state.get_data()
     await send_event("register_button_clicked", {"school_id": data.get("school_id")}, bot_user_id=message.from_user.id)
     tariffs = data.get("tariffs", [])
-    tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
     opts = []
     for tariff_item in tariffs:
         tariff_id = tariff_item.get('tariff_plan_id')
-        tariff_name = tariff_names.get(tariff_id, {}).get(lang, tariff_item.get('code', ''))
-        opts.append(f"{tariff_id}: {tariff_name} {tariff_item['price_kzt']} KZT")
+        # Используем название из API (name_ru/name_kz), если нет - fallback на code
+        if lang == "KZ":
+            tariff_name = tariff_item.get('name_kz') or tariff_item.get('name_ru') or tariff_item.get('code', '')
+        else:
+            tariff_name = tariff_item.get('name_ru') or tariff_item.get('code', '')
+        opts.append(f"{tariff_id}: {tariff_name}")
     await state.set_state(SchoolFlow.tariff)
     await message.answer(t("choose_tariff", lang), reply_markup=choices_keyboard(opts, lang))
 
@@ -536,12 +574,11 @@ async def schools_choose_tariff(message: Message, state: FSMContext):
             tariff = tariff_item
             break
     if not tariff:
-        tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
         opts = []
         for tariff_item in tariffs:
             tariff_id = tariff_item.get('tariff_plan_id')
-            tariff_name = tariff_names.get(tariff_id, {}).get(lang, tariff_item.get('code', ''))
-            opts.append(f"{tariff_id}: {tariff_name} {tariff_item['price_kzt']} KZT")
+            tariff_name = get_tariff_name(tariff_item, lang)
+            opts.append(f"{tariff_id}: {tariff_name}")
         await message.answer(t("choose_tariff", lang), reply_markup=choices_keyboard(opts, lang))
         return
     await send_event("tariff_selected", {"tariff_plan_id": tariff['tariff_plan_id']}, bot_user_id=message.from_user.id)
@@ -552,9 +589,7 @@ async def schools_choose_tariff(message: Message, state: FSMContext):
     
     # Показываем описание тарифа, если оно есть
     if tariff_description:
-        tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
-        tariff_id = tariff.get('tariff_plan_id')
-        tariff_name = tariff_names.get(tariff_id, {}).get(lang, tariff.get('code', ''))
+        tariff_name = get_tariff_name(tariff, lang)
         tariff_price = tariff.get('price_kzt', 0)
         
         description_text = (
@@ -581,12 +616,11 @@ async def schools_enter_name(message: Message, state: FSMContext):
         tariffs = data.get("tariffs", [])
         if tariffs:
             await state.set_state(SchoolFlow.tariff)
-            tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
             opts = []
             for tariff_item in tariffs:
                 tariff_id = tariff_item.get('tariff_plan_id')
-                tariff_name = tariff_names.get(tariff_id, {}).get(lang, tariff_item.get('code', ''))
-                opts.append(f"{tariff_id}: {tariff_name} {tariff_item['price_kzt']} KZT")
+                tariff_name = get_tariff_name(tariff_item, lang)
+                opts.append(f"{tariff_id}: {tariff_name}")
             await message.answer(t("choose_tariff", lang), reply_markup=choices_keyboard(opts, lang))
         else:
             await state.clear()
@@ -635,8 +669,7 @@ async def schools_enter_phone(message: Message, state: FSMContext):
     category_name = next((get_name_by_lang(c, lang) for c in categories if c["id"] == data['category_id']), str(data['category_id']))
     format_name = next((get_name_by_lang(f, lang) for f in formats if f["id"] == data['training_format_id']), str(data['training_format_id']))
     school_name = get_name_by_lang(detail.get('name', {}), lang) or detail.get('name', {}).get('ru', '')
-    tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
-    tariff_name = tariff_names.get(tariff.get('tariff_plan_id'), {}).get(lang, tariff.get('code', ''))
+    tariff_name = get_tariff_name(tariff, lang)
     confirm_text_ru = (
         f"{t('confirm_data', lang)}\n\n"
         f"Город: {city_name}\n"
@@ -751,8 +784,7 @@ async def schools_confirm_any(message: Message, state: FSMContext):
     city_name = next((get_name_by_lang(c, lang) for c in cities if c["id"] == data['city_id']), str(data['city_id']))
     category_name = next((get_name_by_lang(c, lang) for c in categories if c["id"] == data['category_id']), str(data['category_id']))
     school_name = get_name_by_lang(detail.get('name', {}), lang) or detail.get('name', {}).get('ru', '')
-    tariff_names = {1: {"RU": "Базовый", "KZ": "Негізгі"}, 2: {"RU": "Стандарт", "KZ": "Стандарт"}, 3: {"RU": "Премиум", "KZ": "Премиум"}}
-    tariff_name = tariff_names.get(tariff.get('tariff_plan_id'), {}).get(lang, tariff.get('code', ''))
+    tariff_name = get_tariff_name(tariff, lang)
     
     confirm_text_ru = (
         f"{t('confirm_data', lang)}\n\n"

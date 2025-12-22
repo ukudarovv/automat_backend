@@ -61,14 +61,12 @@ async def certificate_start(message: Message, state: FSMContext):
     )
     text = text_kz if lang == "KZ" else text_ru
     
-    # Кнопки согласно ТЗ
+    # Кнопки согласно ТЗ (тесты перенесены в главное меню)
     options_ru = [
-        "📘 Тесты по ПДД",
         "🏫 Пройти автошколу заново",
         "🚗 Записаться к инструктору",
     ]
     options_kz = [
-        "📘 ЖҚД тесттері",
         "🏫 Автошколаны қайта өту",
         "🚗 Нұсқаушыға жазылу",
     ]
@@ -114,12 +112,7 @@ async def certificate_choose_action(message: Message, state: FSMContext):
     if "main_intent" not in data:
         await state.update_data(main_intent="CERT_NOT_PASSED")
     
-    if "тест" in text_lower or "пдд" in text_lower or "жқд" in text_lower:
-        # Переход в поток тестов
-        await send_event("certificate_action_selected", {"action": "tests"}, bot_user_id=message.from_user.id)
-        from handlers.tests_flow import tests_start
-        await tests_start(message, state)
-    elif "автошкол" in text_lower or "автомектеп" in text_lower:
+    if "автошкол" in text_lower or "автомектеп" in text_lower:
         # Переход в поток автошкол
         await send_event("certificate_action_selected", {"action": "schools"}, bot_user_id=message.from_user.id)
         from handlers.schools_flow import schools_start
