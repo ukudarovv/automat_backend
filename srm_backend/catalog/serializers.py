@@ -7,6 +7,8 @@ from .models import School, SchoolTariff, Instructor, InstructorTariff
 class SchoolTariffSerializer(serializers.ModelSerializer):
     name_ru = serializers.CharField(source="tariff_plan.name_ru", read_only=True)
     name_kz = serializers.CharField(source="tariff_plan.name_kz", read_only=True)
+    tariff_plan = serializers.SerializerMethodField()
+    school_id = serializers.IntegerField(source="school.id", read_only=True)
     category_ids = serializers.SerializerMethodField()
     training_time_ids = serializers.SerializerMethodField()
 
@@ -14,6 +16,8 @@ class SchoolTariffSerializer(serializers.ModelSerializer):
         model = SchoolTariff
         fields = (
             "tariff_plan_id",
+            "tariff_plan",
+            "school_id",
             "name_ru",
             "name_kz",
             "price_kzt",
@@ -24,6 +28,17 @@ class SchoolTariffSerializer(serializers.ModelSerializer):
             "training_format_id",
             "training_time_ids",
         )
+    
+    def get_tariff_plan(self, obj):
+        """Возвращает объект tariff_plan с code"""
+        if obj.tariff_plan:
+            return {
+                "id": obj.tariff_plan.id,
+                "code": obj.tariff_plan.code,
+                "name_ru": obj.tariff_plan.name_ru,
+                "name_kz": obj.tariff_plan.name_kz,
+            }
+        return None
     
     def get_category_ids(self, obj):
         """Возвращает список ID категорий для тарифа"""

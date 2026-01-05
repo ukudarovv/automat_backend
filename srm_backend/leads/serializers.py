@@ -41,7 +41,10 @@ class LeadCreateSerializer(serializers.Serializer):
         payload = attrs.get("payload", {})
 
         if lead_type == Lead.LeadType.SCHOOL:
-            required = ["city_id", "category_id", "training_format_id", "school_id"]
+            # Для онлайн-продуктов city_id необязателен
+            required = ["category_id", "training_format_id", "school_id"]
+            if not payload.get("tariff_plan_id"):  # Если нет tariff_plan_id, значит обычная заявка на школу
+                required.append("city_id")
             missing = [f for f in required if payload.get(f) is None]
             if missing:
                 raise serializers.ValidationError({"payload": f"Missing fields: {', '.join(missing)}"})

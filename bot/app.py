@@ -13,7 +13,7 @@ from aiogram.types import Message
 from config import BOT_TOKEN, DEFAULT_LANGUAGE
 from i18n import t
 from keyboards.common import main_menu, language_keyboard
-from handlers import tests_flow, schools_flow, instructors_flow, language_flow, certificate_flow
+from handlers import tests_flow, schools_flow, instructors_flow, language_flow, certificate_flow, online_flow
 from services.analytics import send_event
 from states_language import LanguageFlow
 
@@ -109,11 +109,27 @@ async def main():
         # Переход в поток тестов
         from handlers.tests_flow import tests_start
         await tests_start(message, state)
+    
+    # Обработчик "Онлайн-обучение" → поток онлайн-продуктов
+    @root_router.message(F.text.in_([
+        "💻 Онлайн-обучение",
+        "💻 Онлайн оқыту",
+    ]))
+    async def handle_online_training(message: Message, state: FSMContext):
+        await state.clear()
+        lang = await get_user_language(message, state)
+        await send_event("intent_selected", {"intent": "ONLINE"}, bot_user_id=message.from_user.id)
+        # Сохраняем intent в state
+        await state.update_data(main_intent="ONLINE", language=lang)
+        # Переход в поток онлайн-обучения
+        from handlers.online_flow import online_start
+        await online_start(message, state)
 
     # Порядок важен: более специфичные роутеры должны быть первыми
     dp.include_router(language_flow.router)
     dp.include_router(certificate_flow.router)
     dp.include_router(tests_flow.router)
+    dp.include_router(online_flow.router)
     dp.include_router(schools_flow.router)
     dp.include_router(instructors_flow.router)
     dp.include_router(root_router)  # Общие обработчики в конце

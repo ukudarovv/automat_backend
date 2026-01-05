@@ -134,6 +134,43 @@ class ApiClient:
         resp = await self._request_with_retry("GET", f"{self.base_url}/instructors/{instructor_id}", headers=self._headers())
         return resp.json()
 
+    async def get_online_tariff(self, tariff_plan_code: str, category_id: Optional[int] = None, school_id: Optional[int] = None):
+        """
+        Получить тариф онлайн-продукта по коду тарифного плана.
+        Если school_id указан, ищем тариф у конкретной школы.
+        Если category_id указан, фильтруем по категории.
+        """
+        # Если school_id указан, используем school_detail
+        if school_id:
+            detail = await self.get_school_detail(school_id, category_id=category_id, training_format_id=1)  # 1 = Онлайн
+            tariffs = detail.get("tariffs", [])
+            for tariff in tariffs:
+                tariff_plan = tariff.get("tariff_plan", {})
+                if isinstance(tariff_plan, dict) and tariff_plan.get("code") == tariff_plan_code:
+                    # Убеждаемся, что school_id есть в тарифе
+                    if "school_id" not in tariff:
+                        tariff["school_id"] = school_id
+                    return tariff
+            return None
+        
+        # Если school_id не указан, ищем через список школ
+        # Получаем все города и ищем тарифы
+        cities = await self.get_cities()
+        for city in cities:
+            schools = await self.get_schools(city["id"])
+            for school in schools:
+                current_school_id = school["id"]
+                detail = await self.get_school_detail(current_school_id, category_id=category_id, training_format_id=1)
+                tariffs = detail.get("tariffs", [])
+                for tariff in tariffs:
+                    tariff_plan = tariff.get("tariff_plan", {})
+                    if isinstance(tariff_plan, dict) and tariff_plan.get("code") == tariff_plan_code:
+                        # Убеждаемся, что school_id есть в тарифе
+                        if "school_id" not in tariff:
+                            tariff["school_id"] = current_school_id
+                        return tariff
+        return None
+
     async def create_lead(self, payload: dict):
         resp = await self._request_with_retry("POST", f"{self.base_url}/leads", json=payload, headers=self._headers())
         return resp.json()

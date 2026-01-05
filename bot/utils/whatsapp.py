@@ -160,3 +160,40 @@ def build_wa_link_instructor(instructor_detail: dict, name: str, phone: str, cat
     
     return f"https://wa.me/{owner_phone.replace('+', '')}?text={urllib.parse.quote(text)}"
 
+
+def build_wa_link_online(tariff_plan_name: str, first_name: str, last_name: str, iin: str, whatsapp: str, 
+                         category_name: str = "", lang: str = "RU") -> str:
+    """Генерация WhatsApp ссылки для онлайн-продуктов"""
+    # Используем номер для автошкол: +7 702 634 5274
+    owner_phone = WHATSAPP_SCHOOLS
+    
+    full_name = f"{first_name} {last_name}".strip()
+    
+    # Формируем текст сообщения
+    if lang == "KZ":
+        text = (
+            f"Здравствуйте! Заявка на онлайн-обучение.\n\n"
+            f"Тариф: {tariff_plan_name}\n"
+        )
+        if category_name:
+            text += f"Санат: {category_name}\n"
+        text += (
+            f"ЖСН: {iin}\n"
+            f"Аты: {full_name}\n"
+            f"WhatsApp: {whatsapp}"
+        )
+    else:
+        text = (
+            f"Здравствуйте! Заявка на онлайн-обучение.\n\n"
+            f"Тариф: {tariff_plan_name}\n"
+        )
+        if category_name:
+            text += f"Категория: {category_name}\n"
+        text += (
+            f"ИИН: {iin}\n"
+            f"Имя: {full_name}\n"
+            f"WhatsApp: {whatsapp}"
+        )
+    
+    return f"https://wa.me/{owner_phone.replace('+', '')}?text={urllib.parse.quote(text)}"
+

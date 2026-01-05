@@ -31,6 +31,9 @@ class School(models.Model):
             models.Index(fields=["rating"]),
         ]
         ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(fields=["name_ru"], name="unique_school_name_ru")
+        ]
 
     def __str__(self):
         return self.name_ru
